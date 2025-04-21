@@ -60,9 +60,9 @@ def run_search_logic(query, unit):
         for article in articles:
             조내용 = article.findtext("조문내용") or ""
             조출력 = False
-            첫항처리됨 = False
-            항출력_했는가 = False
+            항처리됨 = False
             출력덩어리 = []
+            첫항출력_내용 = None  # 중복 방지용
 
             if keyword_clean in clean(조내용):
                 출력덩어리.append(highlight(조내용, query))
@@ -76,7 +76,6 @@ def run_search_logic(query, unit):
 
                 for 호 in 항.findall("호"):
                     호내용 = 호.findtext("호내용") or ""
-                    목출력됨 = False
                     if keyword_clean in clean(호내용):
                         if not 항출력:
                             항덩어리.append(highlight(항내용, query))
@@ -85,9 +84,9 @@ def run_search_logic(query, unit):
                         호출력된 = True
 
                     for 목 in 호.findall("목"):
-                        목내용_들 = 목.findall("목내용")
-                        if 목내용_들:
-                            combined = ''.join([목내용.text or "" for 목내용 in 목내용_들])
+                        목내용_list = 목.findall("목내용")
+                        if 목내용_list:
+                            combined = "".join([m.text or "" for m in 목내용_list])
                             if keyword_clean in clean(combined):
                                 if not 항출력:
                                     항덩어리.append(highlight(항내용, query))
@@ -95,22 +94,16 @@ def run_search_logic(query, unit):
                                 if not 호출력된:
                                     항덩어리.append("&nbsp;&nbsp;" + highlight(호내용, query))
                                     호출력된 = True
-                                항덩어리.append("&nbsp;&nbsp;&nbsp;&nbsp;" + highlight(combined, query))
-                                목출력됨 = True
+                                정리된 = combined.replace("\n", "").replace("<![CDATA[", "").replace("]]>", "")
+                                항덩어리.append("&nbsp;&nbsp;&nbsp;&nbsp;" + highlight(정리된, query))
 
                 if 항출력:
                     if not 조출력:
-                        출력덩어리.append(highlight(조내용, query) + " " + highlight(항내용, query))  # 조내용 + 첫 항
+                        출력덩어리.append(highlight(조내용, query) + " " + highlight(항내용, query))
+                        첫항출력_내용 = 항내용
                         조출력 = True
-                        첫항처리됨 = True
-                        항출력_했는가 = True
-                    elif not 첫항처리됨:
+                    elif 항내용 != 첫항출력_내용:
                         출력덩어리.append(highlight(항내용, query))
-                        첫항처리됨 = True
-                        항출력_했는가 = True
-                    elif 항내용 not in 출력덩어리:
-                        출력덩어리.append("<br>" + highlight(항내용, query))
-                        항출력_했는가 = True
                     출력덩어리.extend(항덩어리)
 
             if 출력덩어리:
@@ -120,57 +113,3 @@ def run_search_logic(query, unit):
             result_dict[law["법령명"]] = law_results
 
     return result_dict
-
-def extract_locations(xml_data, keyword):
-    tree = ET.fromstring(xml_data)
-    articles = tree.findall(".//조문단위")
-    keyword_clean = clean(keyword)
-    locations = []
-    for article in articles:
-        조번호 = article.findtext("조번호", "").strip()
-        조제목 = article.findtext("조문제목", "") or ""
-        조내용 = article.findtext("조문내용", "") or ""
-        항들 = article.findall("항")
-
-        if keyword_clean in clean(조제목):
-            locations.append(f"제{조번호}조의 제목")
-        if keyword_clean in clean(조내용):
-            locations.append(f"제{조번호}조")
-
-        for 항 in 항들:
-            항번호 = 항.findtext("항번호", "").strip()
-            항내용 = 항.findtext("항내용", "") or ""
-            if keyword_clean in clean(항내용):
-                locations.append(f"제{조번호}조제{항번호}항")
-    return locations
-
-def deduplicate(seq):
-    seen = set()
-    return [x for x in seq if not (x in seen or seen.add(x))]
-
-def format_location_list(locations):
-    return " 및 ".join(locations)
-
-def get_josa(word, josa_with_batchim, josa_without_batchim):
-    if not word:
-        return josa_with_batchim
-    last_char = word[-1]
-    code = ord(last_char)
-    return josa_with_batchim if (code - 44032) % 28 != 0 else josa_without_batchim
-
-def run_amendment_logic(find_word, replace_word):
-    조사 = get_josa(find_word, "을", "를")
-    amendment_results = []
-    for law in get_law_list_from_api(find_word):
-        law_name = law["법령명"]
-        mst = law["MST"]
-        xml = get_law_text_by_mst(mst)
-        if not xml:
-            continue
-        locations = extract_locations(xml, find_word)
-        if not locations:
-            continue
-        loc_str = format_location_list(deduplicate(locations))
-        sentence = f"① {law_name} 일부를 다음과 같이 개정한다. {loc_str} 중 “{find_word}”{조사} 각각 “{replace_word}”로 한다."
-        amendment_results.append(sentence)
-    return amendment_results if amendment_results else ["⚠️ 개정 대상 조문이 없습니다."]
