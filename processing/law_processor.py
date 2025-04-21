@@ -61,6 +61,7 @@ def run_search_logic(query, unit):
             조내용 = article.findtext("조문내용") or ""
             조출력 = False
             첫항처리됨 = False
+            항출력_했는가 = False
             출력덩어리 = []
 
             if keyword_clean in clean(조내용):
@@ -71,14 +72,17 @@ def run_search_logic(query, unit):
                 항내용 = 항.findtext("항내용") or ""
                 항출력 = keyword_clean in clean(항내용)
                 항덩어리 = []
+                호출력된 = False
 
                 for 호 in 항.findall("호"):
                     호내용 = 호.findtext("호내용") or ""
+                    목출력됨 = False
                     if keyword_clean in clean(호내용):
                         if not 항출력:
                             항덩어리.append(highlight(항내용, query))
                             항출력 = True
                         항덩어리.append("&nbsp;&nbsp;" + highlight(호내용, query))
+                        호출력된 = True
 
                     for 목 in 호.findall("목"):
                         목내용_들 = 목.findall("목내용")
@@ -88,20 +92,25 @@ def run_search_logic(query, unit):
                                 if not 항출력:
                                     항덩어리.append(highlight(항내용, query))
                                     항출력 = True
-                                항덩어리.append("&nbsp;&nbsp;" + highlight(호내용, query))
+                                if not 호출력된:
+                                    항덩어리.append("&nbsp;&nbsp;" + highlight(호내용, query))
+                                    호출력된 = True
                                 항덩어리.append("&nbsp;&nbsp;&nbsp;&nbsp;" + highlight(combined, query))
+                                목출력됨 = True
 
                 if 항출력:
                     if not 조출력:
-                        출력덩어리.append(highlight(조내용, query) + " " + highlight(항내용, query))
+                        출력덩어리.append(highlight(조내용, query) + " " + highlight(항내용, query))  # 조내용 + 첫 항
                         조출력 = True
                         첫항처리됨 = True
-                    else:
-                        if not 첫항처리됨:
-                            출력덩어리.append(highlight(항내용, query))
-                            첫항처리됨 = True
-                        else:
-                            출력덩어리.append("<br>" + highlight(항내용, query))
+                        항출력_했는가 = True
+                    elif not 첫항처리됨:
+                        출력덩어리.append(highlight(항내용, query))
+                        첫항처리됨 = True
+                        항출력_했는가 = True
+                    elif 항내용 not in 출력덩어리:
+                        출력덩어리.append("<br>" + highlight(항내용, query))
+                        항출력_했는가 = True
                     출력덩어리.extend(항덩어리)
 
             if 출력덩어리:
