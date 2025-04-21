@@ -60,6 +60,7 @@ def run_search_logic(query, unit):
         for article in articles:
             조내용 = article.findtext("조문내용") or ""
             조출력 = False
+            첫항처리됨 = False
             출력덩어리 = []
 
             if keyword_clean in clean(조내용):
@@ -80,20 +81,28 @@ def run_search_logic(query, unit):
                         항덩어리.append("&nbsp;&nbsp;" + highlight(호내용, query))
 
                     for 목 in 호.findall("목"):
-                        목내용 = 목.findtext("목내용") or ""
-                        if keyword_clean in clean(목내용):
-                            if not 항출력:
-                                항덩어리.append(highlight(항내용, query))
-                                항출력 = True
-                            if not any(keyword_clean in clean(호내용) for ho내용 in 항덩어리):
+                        목내용_들 = 목.findall("목내용")
+                        if 목내용_들:
+                            combined = ''.join([목내용.text or "" for 목내용 in 목내용_들])
+                            if keyword_clean in clean(combined):
+                                if not 항출력:
+                                    항덩어리.append(highlight(항내용, query))
+                                    항출력 = True
                                 항덩어리.append("&nbsp;&nbsp;" + highlight(호내용, query))
-                            항덩어리.append("&nbsp;&nbsp;&nbsp;&nbsp;" + highlight(목내용, query))
+                                항덩어리.append("&nbsp;&nbsp;&nbsp;&nbsp;" + highlight(combined, query))
 
                 if 항출력:
                     if not 조출력:
-                        출력덩어리.insert(0, highlight(조내용, query))
+                        출력덩어리.append(highlight(조내용, query) + " " + highlight(항내용, query))
                         조출력 = True
-                    출력덩어리.extend(항덩어리 if 항덩어리 else [highlight(항내용, query)])
+                        첫항처리됨 = True
+                    else:
+                        if not 첫항처리됨:
+                            출력덩어리.append(highlight(항내용, query))
+                            첫항처리됨 = True
+                        else:
+                            출력덩어리.append("<br>" + highlight(항내용, query))
+                    출력덩어리.extend(항덩어리)
 
             if 출력덩어리:
                 law_results.append("<br>".join(출력덩어리))
