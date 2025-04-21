@@ -57,11 +57,7 @@ def run_search_logic(query, unit):
         articles = tree.findall(".//조문단위")
         law_results = []
 
-        
-    for article in articles:
-        첫_항출력됨 = False
-        첫_항내용_텍스트 = ""
-    
+        for article in articles:
             조내용 = article.findtext("조문내용") or ""
             조출력 = False
             항처리됨 = False
@@ -72,50 +68,7 @@ def run_search_logic(query, unit):
                 출력덩어리.append(highlight(조내용, query))
                 조출력 = True
 
-            
-        for idx, 항 in enumerate(article.findall("항")):
-            항내용 = 항.findtext("항내용") or ""
-            항출력 = keyword_clean in clean(항내용)
-            항덩어리 = []
-            호출력된 = False
-
-            for 호 in 항.findall("호"):
-                호내용 = 호.findtext("호내용") or ""
-                if keyword_clean in clean(호내용):
-                    if not 항출력:
-                        항덩어리.append(highlight(항내용, query))
-                        항출력 = True
-                    항덩어리.append("&nbsp;&nbsp;" + highlight(호내용, query))
-                    호출력된 = True
-
-                for 목 in 호.findall("목"):
-                    목내용_list = 목.findall("목내용")
-                    if 목내용_list:
-                        combined_lines = []
-                        for m in 목내용_list:
-                            line = (m.text or "").replace("<![CDATA[", "").replace("]]>", "").strip()
-                            if line:
-                                combined_lines.append(highlight(line, query))
-                        if combined_lines:
-                            if not 항출력:
-                                항덩어리.append(highlight(항내용, query))
-                                항출력 = True
-                            if not 호출력된:
-                                항덩어리.append("&nbsp;&nbsp;" + highlight(호내용, query))
-                                호출력된 = True
-                            항덩어리.append("<br>".join(["&nbsp;&nbsp;&nbsp;&nbsp;" + line for line in combined_lines]))
-
-            # 중복 제거 로직
-            if 항출력:
-                if not 조출력 and not 첫_항출력됨:
-                    출력덩어리.append(highlight(조내용, query) + " " + highlight(항내용, query))
-                    첫_항내용_텍스트 = 항내용.strip()
-                    첫_항출력됨 = True
-                    조출력 = True
-                elif 항내용.strip() != 첫_항내용_텍스트:
-                    출력덩어리.append(highlight(항내용, query))
-                출력덩어리.extend(항덩어리)
-    
+            for 항 in article.findall("항"):
                 항내용 = 항.findtext("항내용") or ""
                 항출력 = keyword_clean in clean(항내용)
                 항덩어리 = []
@@ -166,11 +119,7 @@ def extract_locations(xml_data, keyword):
     articles = tree.findall(".//조문단위")
     keyword_clean = clean(keyword)
     locations = []
-    
     for article in articles:
-        첫_항출력됨 = False
-        첫_항내용_텍스트 = ""
-    
         조번호 = article.findtext("조번호", "").strip()
         조제목 = article.findtext("조문제목", "") or ""
         조내용 = article.findtext("조문내용", "") or ""
